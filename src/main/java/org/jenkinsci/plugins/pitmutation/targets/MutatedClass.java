@@ -3,15 +3,19 @@ package org.jenkinsci.plugins.pitmutation.targets;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Maps;
 import hudson.util.TextFile;
+import org.apache.commons.lang3.StringUtils;
 import org.jenkinsci.plugins.pitmutation.Mutation;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
+import java.util.logging.Level;
 
 
 public class MutatedClass extends MutationResult<MutatedClass> {
+
+    private static final String ROOT_REPORT_FOLDER = "mutation-report";
 
     private String name;
     private String packageName;
@@ -30,10 +34,10 @@ public class MutatedClass extends MutationResult<MutatedClass> {
 
     private String getFileName(String name) {
         int firstDollar = name.indexOf('$');
-        int lastDot = name.lastIndexOf('.');
+        int lastDot = name.lastIndexOf('.'); //FIXME paskudny zapis nizej
         return firstDollar >= 0
-                ? lastDot >= 0 ? name.substring(lastDot + 1, firstDollar) + ".java.html" : ""
-                : lastDot >= 0 ? name.substring(lastDot + 1) + ".java.html" : "";
+                ? (lastDot >= 0 ? name.substring(lastDot + 1, firstDollar) + ".java.html" : "")
+                : (lastDot >= 0 ? name.substring(lastDot + 1) + ".java.html" : "");
     }
 
     private String getPackageName(String name) {
@@ -60,15 +64,32 @@ public class MutatedClass extends MutationResult<MutatedClass> {
 
     public String getSourceFileContent() {
         try {
-            return new TextFile(new File(getOwner().getRootDir(), "mutation-report/" + packageName + File.separator + fileName)).read();
+//            return new TextFile(new File(getOwner().getRootDir(), "mutation-report/" + packageName + File.separator + fileName)).read();
+            File file = new File(getOwner().getRootDir(), getClassReportPath());
+            String absolutePath = file.getAbsolutePath(); //FIXME a gdzie module name?
+            return new TextFile(file).read();
+
         } catch (IOException exception) {
-            return "Could not read source file: " + getOwner().getRootDir().getPath()
-                    + "/mutation-report/" + packageName + File.separator + fileName + "\n";
+            String exceptionMessage = "Could not read source file: " + getOwner().getRootDir().getPath() + File.separator
+                    + getClassReportPath() + "\n";
+            logger.log(Level.FINER, "NO TO KLOPS" + exceptionMessage); //FIXME
+            return exceptionMessage;
         }
     }
 
+    private String getClassReportPath() {
+        return ROOT_REPORT_FOLDER + File.separator + getModuleName() + packageName + File.separator + fileName;
+    }
+
+    private String getModuleName() { //FIXME sprawdz dla jednomodulowego
+        if (getParents().size() > 2) {
+            return getParent().getParent().getName() + File.separator;
+        }
+        return StringUtils.EMPTY;
+    }
+
     public String getDisplayName() {
-        return "Class: " + getName();
+        return getName();
     }
 
     @Override

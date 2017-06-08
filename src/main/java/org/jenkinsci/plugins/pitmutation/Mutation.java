@@ -22,12 +22,11 @@ public class Mutation {
     private String methodDescription;
 
 
-
     public boolean isDetected() {
         return detected;
     }
 
-    //TODO better equals
+    //FIXME ?????? better equals
     public boolean equals(Mutation m) {
         return m.getMutatedClass().equals(getMutatedClass())
                 && m.getMutatedMethod().equals(getMutatedMethod())

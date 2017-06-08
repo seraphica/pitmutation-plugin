@@ -7,7 +7,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.FilenameFilter;
-import java.util.Map;
+import java.io.PrintStream;
 
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
@@ -22,27 +22,28 @@ import static org.mockito.Mockito.when;
  */
 public class PitBuildActionTest {
     private PitBuildAction pitBuildAction;
-    private AbstractBuild owner_;
-    private AbstractBuild failedBuild_;
-    private AbstractBuild successBuild_;
-    private MutationReport report_;
+    private AbstractBuild owner;
+    private AbstractBuild failedBuild;
+    private AbstractBuild successBuild;
+    private MutationReport report;
 
     @Before
     public void setUp() {
-        failedBuild_ = mock(AbstractBuild.class);
-        when(failedBuild_.getResult()).thenReturn(Result.FAILURE);
-        successBuild_ = mock(AbstractBuild.class);
-        when(successBuild_.getResult()).thenReturn(Result.SUCCESS);
-        owner_ = mock(AbstractBuild.class);
+        failedBuild = mock(AbstractBuild.class);
+        when(failedBuild.getResult()).thenReturn(Result.FAILURE);
+        successBuild = mock(AbstractBuild.class);
+        when(successBuild.getResult()).thenReturn(Result.SUCCESS);
+        owner = mock(AbstractBuild.class);
         File mockFileSys = mock(File.class);
         File mockFile = mock(File.class);
         File[] files = new File[1];
         files[0] = mockFile;
         when(mockFileSys.listFiles(any(FilenameFilter.class))).thenReturn(files);
 
-        when(owner_.getRootDir()).thenReturn(mockFileSys);
-        report_ = mock(MutationReport.class);
-        pitBuildAction = new PitBuildAction(owner_);
+        when(owner.getRootDir()).thenReturn(mockFileSys);
+        report = mock(MutationReport.class);
+        PrintStream printStream = mock(PrintStream.class);
+        pitBuildAction = new PitBuildAction(owner, printStream);
     }
 
     @Test
@@ -52,16 +53,16 @@ public class PitBuildActionTest {
 
     @Test
     public void previousReturnsNullIfAllPreviousBuildsFailed() {
-        when(owner_.getPreviousBuild()).thenReturn(failedBuild_);
+        when(owner.getPreviousBuild()).thenReturn(failedBuild);
         assertThat(pitBuildAction.getPreviousAction(), nullValue());
     }
 
     @Test
     public void previousReturnsLastSuccessfulBuild() {
         PitBuildAction previousSucccessAction = mock(PitBuildAction.class);
-        when(owner_.getPreviousBuild()).thenReturn(failedBuild_);
-        when(failedBuild_.getPreviousBuild()).thenReturn(successBuild_);
-        when(successBuild_.getAction(PitBuildAction.class)).thenReturn(previousSucccessAction);
+        when(owner.getPreviousBuild()).thenReturn(failedBuild);
+        when(failedBuild.getPreviousBuild()).thenReturn(successBuild);
+        when(successBuild.getAction(PitBuildAction.class)).thenReturn(previousSucccessAction);
 
         assertThat(pitBuildAction.getPreviousAction(), is(previousSucccessAction));
     }
@@ -69,13 +70,28 @@ public class PitBuildActionTest {
     @Test
     public void shouldGetModuleName() throws Exception {
         //given
+//      String pathToTest = "/home/jenkins/work/jobs/polon-pit-mutation/buils/28/mutation-report/service-impl/mutations.xml";
+        String pathToTest = "D:\\tools\\Jenkins\\jobs\\mutant\\builds\\28\\mutation-report\\service-impl\\mutations.xml";
 
         //when
-//        String moduleName = pitBuildAction.getModuleName("/home/jenkins/work/jobs/polon-pit-mutation/workspace/common/target/pit-reports/201706071301/mutations.xml");
-        String moduleName2 = pitBuildAction.getModuleName("D:\\tools\\Jenkins\\workspace\\mutant\\common\\target\\pit-reports\\201706071301\\mutations.xml");
+        String moduleName = pitBuildAction.extractModuleName(pathToTest);
 
         //then
-        assertEquals("common", moduleName2);
+        assertEquals("service-impl", moduleName);
+
+    }
+
+    @Test
+    public void shouldGetModuleNameIfSingleModule() throws Exception {
+        //given
+//      String pathToTest = "/home/jenkins/work/jobs/polon-pit-mutation/buils/28/mutation-report/service-impl/mutations.xml";
+        String pathToTest = "D:\\tools\\Jenkins\\jobs\\mutant\\builds\\28\\mutation-report\\mutations.xml";
+
+        //when
+        String moduleName = pitBuildAction.extractModuleName(pathToTest);
+
+        //then
+        assertEquals("", moduleName);
 
     }
 }

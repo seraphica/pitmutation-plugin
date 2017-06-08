@@ -8,6 +8,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.xml.sax.SAXException;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
@@ -15,11 +16,11 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThan;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -27,44 +28,25 @@ import static org.mockito.Mockito.when;
 /**
  * @author Ed Kimber
  */
-public class MutationMyResultIT {
+public class MutationResultMultiModuleIT {
 
     private static final String TESTED_PACKAGE = "com.awesomeness.dummy";
     private static final String REPORT_OLD_FILE = "mutations_OLD.xml";
     private static final String REPORT_NEW_FILE = "mutations.xml";
     private static final String PACKAGE_SEPARATOR = ".";
     private static final String TESTED_CLASS = "ImportantServiceImpl";
-    private static final String TESTED_CLASS_CANONIQUE = TESTED_PACKAGE + PACKAGE_SEPARATOR + TESTED_CLASS;
-    private static final String MODULE_NAME = "module_name";
+    private static final String TESTED_CLASS_CANONICAL = TESTED_PACKAGE + PACKAGE_SEPARATOR + TESTED_CLASS;
+    private static final String MODULE_NAME = "awesome_module_name";
     private static final String SECOND_TESTING_PACKAGE = "com.awesomeness.dummy.details";
 
-    private MutationResult<?> projectResult;
-    private MutationResult<?> moduleResult;
+    private ProjectMutations projectResult;
+    private ModuleResult moduleResult;
 
 
     @Before
     public void setUp() throws IOException, SAXException {
-        Map<String, MutationReport> reportsNew = new HashMap<String, MutationReport>();
-        Map<String, MutationReport> reportsOld = new HashMap<String, MutationReport>();
-        reportsNew.put(MODULE_NAME, MutationReport.create(getInputStream(REPORT_NEW_FILE)));
-        reportsOld.put(MODULE_NAME, MutationReport.create(getInputStream(REPORT_OLD_FILE)));
-
-        PitBuildAction pitBuildAction = mock(PitBuildAction.class); //M
-        when(pitBuildAction.getReports()).thenReturn(reportsNew);
-        Run build = mock(FreeStyleBuild.class);
-        when(pitBuildAction.getOwner()).thenReturn(build);
-
-        PitBuildAction previousBuildAction = mock(PitBuildAction.class); //M
-        when(previousBuildAction.getReports()).thenReturn(reportsOld);
-        when(previousBuildAction.getReport()).thenReturn(new ProjectMutations(previousBuildAction));
-        when(pitBuildAction.getPreviousAction()).thenReturn(previousBuildAction);
-
-        projectResult = new ProjectMutations(pitBuildAction);
-        moduleResult = projectResult.getChildMap().get(MODULE_NAME);
-    }
-
-    private InputStream getInputStream(String reportOldFile) {
-        return MutationReport.class.getResourceAsStream(reportOldFile);
+        projectResult = new ProjectMutations(mockBuildAction());
+        moduleResult = (ModuleResult) projectResult.getChildMap().get(MODULE_NAME);
     }
 
     @Test
@@ -87,7 +69,7 @@ public class MutationMyResultIT {
     @Test
     public void classResultsStats() {
         MutationResult packageResult = projectResult.getChildResult(MODULE_NAME).getChildResult(TESTED_PACKAGE);
-        MutationResult classResult = packageResult.getChildResult(TESTED_CLASS_CANONIQUE);
+        MutationResult classResult = packageResult.getChildResult(TESTED_CLASS_CANONICAL);
 
         MutationStats stats = classResult.getMutationStats();
 
@@ -98,7 +80,7 @@ public class MutationMyResultIT {
     @Test
     public void classResultsStatsDelta() {
         MutationResult packageResult = projectResult.getChildResult(MODULE_NAME).getChildResult(TESTED_PACKAGE);
-        MutationResult classResult = packageResult.getChildResult(TESTED_CLASS_CANONIQUE);
+        MutationResult classResult = packageResult.getChildResult(TESTED_CLASS_CANONICAL);
 
         MutationStats delta = classResult.getStatsDelta();
 
@@ -147,38 +129,38 @@ public class MutationMyResultIT {
         //        Map<String, ? extends MutationResult<?>> mutationResult = ((MutatedPackage) mutationResult1)
 //                .getChildMap();
         Collection<MutatedClass> survivors = (Collection<MutatedClass>) children;
-//        assertThat(survivors, hasSize(2));
-
         Iterator<MutatedClass> it = survivors.iterator();
-        MutatedClass a = it.next();
+        MutatedClass mutatedClass = it.next();
 //        MutatedClass b = it.next();
 //        if (a.getFileName().equals(TESTED_CLASS + ".java.html")) {
-        checkMutationJava(a);
-        assertEquals("ImportantServiceImpl.java.html", a.getFileName());
-        assertEquals("com.awesomeness.dummy.ImportantServiceImpl", a.getName());
-        assertEquals("Class: com.awesomeness.dummy.ImportantServiceImpl", a.getDisplayName());
-        assertEquals("com.awesomeness.dummy", a.getPackage());
-        assertEquals("sdsddfdfsd", a.getSourceFileContent());
-        assertEquals("sdsddfdfsd", a.getUrl());
-//        assertEquals("sdsddfdfsd", a.get);
-        assertFalse(a.isSourceLevel());
-
-        //        checkPitBuildActionJava(a);
-//        } else {
-//            checkMutationJava(b);
-//            checkPitBuildActionJava(a);
-//        }
+        assertThat(mutatedClass.getFileName(), is(TESTED_CLASS + ".java.html"));
+        assertThat(mutatedClass.getChildMap().values(), hasSize(38));
+        assertEquals("ImportantServiceImpl.java.html", mutatedClass.getFileName());
+        assertEquals("com.awesomeness.dummy.ImportantServiceImpl", mutatedClass.getName());
+        assertEquals("com.awesomeness.dummy.ImportantServiceImpl", mutatedClass.getDisplayName());
+        assertEquals("com.awesomeness.dummy", mutatedClass.getPackage());
+        assertEquals("com_awesomeness_dummy_ImportantServiceImpl", mutatedClass.getUrl());
+        assertThat(mutatedClass.isSourceLevel()).isTrue();
     }
 
-    private void checkMutationJava(MutatedClass mutant) {
-        assertThat(mutant.getFileName(), is(TESTED_CLASS + ".java.html"));
-        assertThat(mutant.getChildMap().values(), hasSize(38));
-    }
+    @Test
+    public void shouldReadSourceFileContentMultiModule() {
+        Collection<? extends MutationResult> children = projectResult.getChildMap().get(MODULE_NAME)
+                .getChildMap().get(TESTED_PACKAGE).getChildren();
+        //        Map<String, ? extends MutationResult<?>> mutationResult = ((MutatedPackage) mutationResult1)
+//                .getChildMap();
+        Iterator<MutatedClass> it = ((Collection<MutatedClass>) children).iterator();
+        MutatedClass mutatedClass = it.next();
+//        MutatedClass b = it.next();
+//        if (a.getFileName().equals(TESTED_CLASS + ".java.html")) {
+        assertThat(mutatedClass.getFileName(), is(TESTED_CLASS + ".java.html"));
+        assertThat(mutatedClass.getChildMap().values(), hasSize(38));
+        assertEquals("com_awesomeness_dummy_ImportantServiceImpl", mutatedClass.getUrl());
 
-//    private void checkPitBuildActionJava(MutatedClass mutant) {
-//        assertThat(mutant.getFileName(), is("PitBuildAction.java.html"));
-//        assertThat(mutant.getChildMap().values(), hasSize(2));
-//    }
+        assertThat(mutatedClass.getSourceFileContent()).isNotNull().startsWith("<html>");
+        assertThat(mutatedClass.isSourceLevel()).isTrue();
+
+    }
 
 
     @Test
@@ -240,5 +222,59 @@ public class MutationMyResultIT {
     public void testUrlTransform() {
         assertThat(MutationResult.urlTransform("^*!replace::non+'alphas@}129"), is("___replace__non__alphas__129"));
     }
+
+    private PitBuildAction mockBuildAction() throws IOException, SAXException {
+        PitBuildAction pitBuildAction = mock(PitBuildAction.class); //M
+        when(pitBuildAction.getReports()).thenReturn(createNewMutationReportsMap());
+        PitBuildAction previousBuild = mockPreviousBuild();
+        when(pitBuildAction.getPreviousAction()).thenReturn(previousBuild);
+        mockJenkinsBuild(pitBuildAction);
+        return pitBuildAction;
+    }
+
+    private PitBuildAction mockPreviousBuild() throws IOException, SAXException {
+        Map<String, MutationReport> reportsOld = createOldMutationReportsMap();
+        PitBuildAction previousBuildAction = mock(PitBuildAction.class); //M
+        when(previousBuildAction.getReports()).thenReturn(reportsOld);
+        when(previousBuildAction.getReport()).thenReturn(new ProjectMutations(previousBuildAction));
+        return previousBuildAction;
+    }
+
+    private Map<String, MutationReport> createNewMutationReportsMap() throws IOException, SAXException {
+        return createMutationReportsMap(MutationReport.create(getInputStream(REPORT_NEW_FILE)));
+    }
+
+    private Map<String, MutationReport> createOldMutationReportsMap() throws IOException, SAXException {
+        return createMutationReportsMap(MutationReport.create(getInputStream(REPORT_OLD_FILE)));
+    }
+
+    private Map<String, MutationReport> createMutationReportsMap(MutationReport value) throws IOException, SAXException {
+        Map<String, MutationReport> reportsOld = new HashMap<String, MutationReport>();
+        reportsOld.put(MODULE_NAME, value);
+        return reportsOld;
+    }
+
+
+    private void mockJenkinsBuild(PitBuildAction pitBuildAction) {
+        Run build = mock(FreeStyleBuild.class); //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        when(pitBuildAction.getOwner()).thenReturn(build);
+        when(build.getRootDir()).thenReturn(new File("myjob/13/"));
+        //FIXME new File(project.getBuildDir(), Integer.toString(number)) - BUILD PATH/27/
+    }
+
+    private InputStream getInputStream(String reportOldFile) {
+        return MutationReport.class.getResourceAsStream(reportOldFile);
+    }
+
+
+//    private void checkMutatedClass(MutatedClass mutant) {
+//        assertThat(mutant.getFileName(), is(TESTED_CLASS + ".java.html"));
+//        assertThat(mutant.getChildMap().values(), hasSize(38));
+//    }
+
+//    private void checkPitBuildActionJava(MutatedClass mutant) {
+//        assertThat(mutant.getFileName(), is("PitBuildAction.java.html"));
+//        assertThat(mutant.getChildMap().values(), hasSize(2));
+//    }
 
 }

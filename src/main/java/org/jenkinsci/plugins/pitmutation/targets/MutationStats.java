@@ -22,8 +22,10 @@ public abstract class MutationStats {
     }
 
     private float round(float ratio) {
-        //TODO NaN mutation test
-        if (Float.isNaN(ratio) || Float.isInfinite(ratio)) {
+        if (Float.isNaN(ratio)) { // FIXME for developing purposes
+            return 0;
+        }
+        if (Float.isInfinite(ratio)) {
             return ratio;
         }
         BigDecimal bd = new BigDecimal(ratio);

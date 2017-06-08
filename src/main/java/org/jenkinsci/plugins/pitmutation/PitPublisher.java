@@ -16,6 +16,7 @@ import hudson.tasks.Publisher;
 import hudson.tasks.Recorder;
 import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
+import org.apache.commons.lang3.StringUtils;
 import org.jenkinsci.plugins.pitmutation.targets.MutationStats;
 import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -40,6 +41,8 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
      */
     @Extension
     public static final BuildStepDescriptor<Publisher> DESCRIPTOR = new DescriptorImpl();
+    private static final String ROOT_REPORT_FOLDER = "mutation-report";
+
     private List<Condition> buildConditions;
     private String mutationStatsFile;
     private boolean killRatioMustImprove;
@@ -56,7 +59,7 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
      */
     @DataBoundConstructor
     public PitPublisher(String mutationStatsFile, float minimumKillRatio, boolean killRatioMustImprove) {
-        this.mutationStatsFile = mutationStatsFile;
+        this.mutationStatsFile = mutationStatsFile; // konfig z gui **/mutations.xml
         this.killRatioMustImprove = killRatioMustImprove;
         this.minimumKillRatio = minimumKillRatio;
         this.buildConditions = new ArrayList<Condition>();
@@ -74,14 +77,12 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
 
         this.listener.getLogger().println("Looking for PIT reports in " + workspace.getRemote());
 
-        final FilePath moduleRoot = workspace;
-
         ParseReportCallable fileCallable = new ParseReportCallable(mutationStatsFile);
-        FilePath[] reports = moduleRoot.act(fileCallable);
-        publishReports(reports, new FilePath(build.getRootDir()));
+        FilePath[] reports = workspace.act(fileCallable); //znajdz raporty po patternie w katalogu workspace
+        publishReports(reports, new FilePath(build.getRootDir())); //skopiuj do mutation-report
 
-        PitBuildAction action = new PitBuildAction(build);
-        build.getActions().add(action);
+        PitBuildAction action = new PitBuildAction(build, listener.getLogger());
+        build.addAction(action);
         build.setResult(decideBuildResult(action));
     }
 
@@ -100,21 +101,44 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
      * @param buildTarget the build target
      */
     void publishReports(FilePath[] reports, FilePath buildTarget) {
-        for (int i = 0; i < reports.length; i++) {
-            FilePath report = reports[i];
-            listener.getLogger().println("Publishing mutation report: " + report.getRemote());
-
-            final FilePath targetPath = new FilePath(buildTarget, "mutation-report" + (i == 0 ? "" : i));
-            try {
-                reports[i].getParent().copyRecursiveTo(targetPath);
-            } catch (IOException e) {
-                Util.displayIOException(e, listener);
-                e.printStackTrace(listener.fatalError("Unable to copy coverage from " + reports[i] + " to " + buildTarget));
-                build.setResult(Result.FAILURE);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        if (isMultiModuleProject(reports)) {
+            copyMultiModulesReportsFiles(reports, buildTarget);
+        } else {
+            copySingleModuleReportFiles(reports, buildTarget);
         }
+    }
+
+    private void copySingleModuleReportFiles(FilePath[] reports, FilePath buildTarget) {
+        if (reports.length > 0) {
+            copyMutationReport(reports[0], buildTarget, ROOT_REPORT_FOLDER);
+        }
+    }
+
+    private void copyMultiModulesReportsFiles(FilePath[] reports, FilePath buildTarget) {
+        for (int i = 0; i < reports.length; i++) {
+            copyMutationReport(reports[i], buildTarget, createReportPath(reports[i].getRemote()));
+        }
+    }
+
+    private boolean isMultiModuleProject(FilePath[] reports) {
+        return reports.length > 1;
+    }
+
+    private void copyMutationReport(FilePath report, FilePath buildTarget, String reportPath) {
+        listener.getLogger().println("Publishing mutation report: " + report.getRemote());
+        try {
+            report.getParent().copyRecursiveTo(new FilePath(buildTarget, reportPath));
+        } catch (IOException e) {
+            Util.displayIOException(e, listener);
+            e.printStackTrace(listener.fatalError("Unable to copy coverage from " + report + " to " + buildTarget));
+            build.setResult(Result.FAILURE);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private String createReportPath(String remote) {
+        return getAggregatorFolderName() + File.separator + extractModuleName(remote);
     }
 
     /**
@@ -225,6 +249,15 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
         }
     }
 
+
+    String extractModuleName(String workspacePathToMutationReport) {
+        String partialSubstring = StringUtils.substringBefore(workspacePathToMutationReport, File.separator + "target" + File.separator);
+        return StringUtils.substringAfterLast(partialSubstring, File.separator);
+    }
+
+    public String getAggregatorFolderName() {
+        return ROOT_REPORT_FOLDER;
+    }
 
     /**
      * The type Descriptor.

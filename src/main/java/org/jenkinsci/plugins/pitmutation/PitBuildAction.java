@@ -1,6 +1,5 @@
 package org.jenkinsci.plugins.pitmutation;
 
-import com.google.common.collect.Maps;
 import hudson.FilePath;
 import hudson.model.HealthReport;
 import hudson.model.HealthReportingAction;
@@ -20,6 +19,7 @@ import org.xml.sax.SAXException;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
@@ -32,13 +32,18 @@ import java.util.logging.Logger;
 public class PitBuildAction implements HealthReportingAction, StaplerProxy {
 
 
-    private static final Logger logger = Logger.getLogger(PitBuildAction.class.getName());
+    private static Logger logger = Logger.getLogger(PitBuildAction.class.getName());
+
+    private static final String ROOT_REPORT_FOLDER = "mutation-report";
+    private PrintStream buildLogger;
 
     private Run<?, ?> owner;
     private Map<String, MutationReport> reports;
 
-    public PitBuildAction(Run<?, ?> owner) {
-        this.owner = owner;
+
+    public PitBuildAction(Run<?, ?> build, PrintStream logger) {
+        this.owner = build;
+        this.buildLogger = logger;
     }
 
     public PitBuildAction getPreviousAction() {
@@ -81,34 +86,49 @@ public class PitBuildAction implements HealthReportingAction, StaplerProxy {
         Map<String, MutationReport> reports = new HashMap<String, MutationReport>();
 
         try {
-            FilePath[] files = new FilePath(owner.getRootDir()).list("mutation-report*/mutations.xml");
-
+            FilePath[] files = new FilePath(owner.getRootDir()).list(ROOT_REPORT_FOLDER + "/**/mutations.xml");
+            buildLogger.println("filesów znaleziono " + files.length);
             if (files.length < 1) {
-                logger.log(Level.WARNING, "Could not find mutation-report*/mutations.xml in " + owner.getRootDir());
+                buildLogger.println("Could not find " + ROOT_REPORT_FOLDER + "/**/mutations.xml in " + owner.getRootDir());
             }
-
             for (int i = 0; i < files.length; i++) {
-
-                logger.log(Level.WARNING, "Creating report for file: " + files[i].getRemote());
-                MutationReport mutationReport = MutationReport.create(files[i].read());
-                String moduleName = getModuleName(files[i].getRemote());
-                reports.put(moduleName, mutationReport);
-
+                if (files.length == 1) {
+                    buildLogger.println(" >>> Creating report for file: " + files[i].getRemote());
+                    reports.put(ROOT_REPORT_FOLDER, MutationReport.create(files[i].read()));
+                } else {
+                    buildLogger.println("Creating report for file: " + files[i].getRemote());
+                    reports.put(extractModuleName(files[i].getRemote()), MutationReport.create(files[i].read()));
+                }
             }
         } catch (IOException e) {
+            buildLogger.println("IO EXCEPTION");
             e.printStackTrace();
         } catch (SAXException e) {
+            buildLogger.println("SAX EXCEPTION");
             e.printStackTrace();
         } catch (InterruptedException e) {
+            buildLogger.println("Interrupted EXCEPTION");
             e.printStackTrace();
         }
+        buildLogger.println(" ****** Reports siezer found" + reports.size());
+        logger.log(Level.WARNING, "Reports siezer found" + reports.size());
         return reports;
     }
 
-    String getModuleName(String remote) {
-        String str = StringUtils.substringBefore(remote, File.separator + "target" + File.separator);
-        return StringUtils.substringAfterLast(str, File.separator);
+    String extractModuleName(String remote) { //FIXME if single module returns empty string
+        String pathToMutationReport = StringUtils.substringBeforeLast(remote, File.separator);
+        return StringUtils.substringAfterLast(pathToMutationReport, File.separator + ROOT_REPORT_FOLDER + File.separator);
     }
+
+    /*
+    void publishReports(FilePath[] reports, FilePath buildTarget) {
+        if (isMultiModuleProject(reports)) {
+            copyMultiModulesReportsFiles(reports, buildTarget);
+        } else {
+            copySingleModuleReportFiles(reports, buildTarget);
+        }
+    }
+     */
 
     /**
      * Getter for property 'previousResult'.
