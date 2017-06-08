@@ -1,11 +1,6 @@
 package org.jenkinsci.plugins.pitmutation;
 
-import hudson.Launcher;
-import hudson.model.BuildListener;
 import org.junit.Before;
-import org.junit.Test;
-
-import static org.mockito.Mockito.mock;
 
 /**
  * User: Ed Kimber
@@ -14,19 +9,19 @@ import static org.mockito.Mockito.mock;
  */
 public class PitPublisherTest {
 
-  @Before
-  public void setup() {
-    publisher_ = new PitPublisher("**/mutations.xml", minimumKillRatio_, true);
-
-//    , mock(Launcher.class), mock(BuildListener.class)
-  }
+    private PitPublisher publisher_;
 
 //  @Test
 //  public void mutationReportPresenceCheck() {
 //    publisher_.mutationsReportExists();
 //  }
+    private float minimumKillRatio_ = 0.25f;
 
-  private PitPublisher publisher_;
-  private float minimumKillRatio_ = 0.25f;
+    @Before
+    public void setup() {
+        publisher_ = new PitPublisher("**/mutations.xml", minimumKillRatio_, true);
+
+//    , mock(Launcher.class), mock(BuildListener.class)
+    }
 
 }

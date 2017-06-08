@@ -13,38 +13,35 @@ import java.util.logging.Level;
  */
 public class MutatedPackage extends MutationResult<MutatedPackage> {
 
-  public MutatedPackage(String name, MutationResult parent, Multimap<String, Mutation> classMutations) {
-    super(name, parent);
-    classMutations_ = classMutations;
-  }
+    private Multimap<String, Mutation> classMutations;
 
-  @Override
-  public String getDisplayName() {
-    return "Package: " + getName();
-  }
 
-  @Override
-  public MutationStats getMutationStats() {
-    return new MutationStatsImpl(getName(), classMutations_.values());
-  }
+    public MutatedPackage(String name, MutationResult parent, Multimap<String, Mutation> classMutations) {
+        super(name, parent);
+        this.classMutations = classMutations;
+    }
 
-  @Override
-  public Map<String, ? extends MutationResult<?>> getChildMap() {
-    return Maps.transformEntries(classMutations_.asMap(), classTransformer_);
-  }
+    @Override
+    public String getDisplayName() {
+        return getName();
+    }
 
-  private Maps.EntryTransformer<String, Collection<Mutation>, MutatedClass> classTransformer_ =
-          new Maps.EntryTransformer<String, Collection<Mutation>, MutatedClass>() {
+    @Override
+    public MutationStats getMutationStats() {
+        return new MutationStatsImpl(getName(), classMutations.values());
+    }
+
+    @Override
+    public Map<String, ? extends MutationResult<?>> getChildMap() {
+        return Maps.transformEntries(classMutations.asMap(), new Maps.EntryTransformer<String, Collection<Mutation>, MutatedClass>() {
             public MutatedClass transformEntry(String name, Collection<Mutation> mutations) {
-              logger_.log(Level.FINER, "found " + mutations.size() + " reports for " + name);
-              return new MutatedClass(name, MutatedPackage.this, mutations);
+                logger.log(Level.FINER, "found " + mutations.size() + " reports for " + name);
+                return new MutatedClass(name, MutatedPackage.this, mutations);
             }
-          };
+        });
+    }
 
-
-  private Multimap<String, Mutation> classMutations_;
-
-  public int compareTo(MutatedPackage other) {
-    return this.getMutationStats().getUndetected() - other.getMutationStats().getUndetected();
-  }
+    public int compareTo(MutatedPackage other) {
+        return this.getMutationStats().getUndetected() - other.getMutationStats().getUndetected();
+    }
 }

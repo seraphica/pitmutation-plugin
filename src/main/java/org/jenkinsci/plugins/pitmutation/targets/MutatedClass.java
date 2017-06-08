@@ -2,6 +2,7 @@ package org.jenkinsci.plugins.pitmutation.targets;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Maps;
+import hudson.util.TextFile;
 import org.jenkinsci.plugins.pitmutation.Mutation;
 
 import java.io.File;
@@ -9,90 +10,91 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 
-import hudson.util.TextFile;
 
-/**
- * @author Ed Kimber
- */
 public class MutatedClass extends MutationResult<MutatedClass> {
 
-  public MutatedClass(String name, MutationResult parent, Collection<Mutation> mutations) {
-    super(name, parent);
-    name_ = name;
-    mutations_ = mutations;
+    private String name;
+    private String packageName;
+    private String fileName;
+    private Collection<Mutation> mutations;
+    private Map<String, MutatedLine> mutatedLines;
 
-    int lastDot = name.lastIndexOf('.');
-    int firstDollar = name.indexOf('$');
-    package_ = lastDot >= 0 ? name.substring(0, lastDot) : "";
-    fileName_ = firstDollar >= 0
-            ? lastDot >= 0 ? name.substring(lastDot + 1, firstDollar) + ".java.html" : ""
-            : lastDot >= 0 ? name.substring(lastDot + 1) + ".java.html" : "";
-
-    mutatedLines_ = createMutatedLines(mutations);
-  }
-
-  private Map<String, MutatedLine> createMutatedLines(Collection<Mutation> mutations) {
-    HashMultimap<String, Mutation> multimap = HashMultimap.create();
-    for (Mutation m : mutations) {
-      multimap.put(String.valueOf(m.getLineNumber()), m);
+    public MutatedClass(String name, MutationResult parent, Collection<Mutation> mutations) {
+        super(name, parent);
+        this.name = name;
+        this.mutations = mutations;
+        this.packageName = getPackageName(name);
+        this.fileName = getFileName(name);
+        this.mutatedLines = createMutatedLines(mutations);
     }
-    return Maps.transformEntries(multimap.asMap(), lineTransformer_);
-  }
 
-  @Override
-  public boolean isSourceLevel() {
-    return true;
-  }
-
-  public String getSourceFileContent() {
-    try {
-      return new TextFile(new File(getOwner().getRootDir(), "mutation-report/" + package_ + File.separator + fileName_)).read();
+    private String getFileName(String name) {
+        int firstDollar = name.indexOf('$');
+        int lastDot = name.lastIndexOf('.');
+        return firstDollar >= 0
+                ? lastDot >= 0 ? name.substring(lastDot + 1, firstDollar) + ".java.html" : ""
+                : lastDot >= 0 ? name.substring(lastDot + 1) + ".java.html" : "";
     }
-    catch (IOException exception) {
-      return "Could not read source file: " + getOwner().getRootDir().getPath()
-              + "/mutation-report/" + package_ + File.separator + fileName_ + "\n";
+
+    private String getPackageName(String name) {
+        int lastDotP = name.lastIndexOf('.');
+        return lastDotP >= 0 ? name.substring(0, lastDotP) : "";
     }
-  }
 
-  public String getDisplayName() {
-    return "Class: " + getName();
-  }
-
-  @Override
-  public MutationStats getMutationStats() {
-    return new MutationStatsImpl(getName(), mutations_);
-  }
-
-  public Map<String, ? extends MutationResult<?>> getChildMap() {
-    return mutatedLines_;
-  }
-
-  private final Maps.EntryTransformer<String, Collection<Mutation>, MutatedLine> lineTransformer_ =
-          new Maps.EntryTransformer<String, Collection<Mutation>, MutatedLine>() {
-            public MutatedLine transformEntry(String line, Collection<Mutation> mutations) {
-              return new MutatedLine(line, MutatedClass.this, mutations);
+    private Map<String, MutatedLine> createMutatedLines(Collection<Mutation> mutations) {
+        HashMultimap<String, Mutation> multimap = HashMultimap.create();
+        for (Mutation m : mutations) {
+            multimap.put(String.valueOf(m.getLineNumber()), m);
+        }
+        return Maps.transformEntries(multimap.asMap(), new Maps.EntryTransformer<String, Collection<Mutation>, MutatedLine>() {
+            public MutatedLine transformEntry(String line, Collection<Mutation> mutations1) {
+                return new MutatedLine(line, MutatedClass.this, mutations1);
             }
-          };
+        });
+    }
 
-  public String getName() {
-    return name_;
-  }
+    @Override
+    public boolean isSourceLevel() {
+        return true;
+    }
 
-  public String getFileName() {
-    return fileName_;
-  }
+    public String getSourceFileContent() {
+        try {
+            return new TextFile(new File(getOwner().getRootDir(), "mutation-report/" + packageName + File.separator + fileName)).read();
+        } catch (IOException exception) {
+            return "Could not read source file: " + getOwner().getRootDir().getPath()
+                    + "/mutation-report/" + packageName + File.separator + fileName + "\n";
+        }
+    }
 
-  public String getPackage() {
-    return package_;
-  }
+    public String getDisplayName() {
+        return "Class: " + getName();
+    }
 
-  public int compareTo(MutatedClass other) {
-    return this.getMutationStats().getUndetected() - other.getMutationStats().getUndetected();
-  }
+    @Override
+    public MutationStats getMutationStats() {
+        return new MutationStatsImpl(getName(), mutations);
+    }
 
-  private String name_;
-  private String package_;
-  private String fileName_;
-  private Collection<Mutation> mutations_;
-  private Map<String, MutatedLine> mutatedLines_;
+    public Map<String, ? extends MutationResult<?>> getChildMap() {
+        return mutatedLines;
+    }
+
+
+    public String getName() {
+        return name;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public String getPackage() {
+        return packageName;
+    }
+
+    public int compareTo(MutatedClass other) {
+        return this.getMutationStats().getUndetected() - other.getMutationStats().getUndetected();
+    }
+
 }

@@ -7,38 +7,41 @@ import org.jenkinsci.plugins.pitmutation.Mutation;
 import java.util.Collection;
 
 /**
- * @author  Ed Kimber
+ * @author Ed Kimber
  */
 public class MutationStatsImpl extends MutationStats {
-  public MutationStatsImpl(String title, Collection<Mutation> mutations) {
-    title_ = title;
-    mutationsByType_ = HashMultiset.create();
-    if (mutations == null) return;
-    for (Mutation m : mutations) {
-      if (!m.isDetected()) {
-        undetected_++;
-      }
-      mutationsByType_.add(m.getMutatorClass());
+
+    private String title;
+    private int undetected = 0;
+    private int total;
+    private Multiset<String> mutationsByType;
+
+    public MutationStatsImpl(String title, Collection<Mutation> mutations) {
+        this.title = title;
+        mutationsByType = HashMultiset.create();
+        if (mutations == null) {
+            return;
+        }
+        for (Mutation m : mutations) {
+            if (!m.isDetected()) {
+                undetected++;
+            }
+            mutationsByType.add(m.getMutatorClass());
+        }
+
+        total = mutations.size();
     }
 
-    total_ = mutations.size();
-  }
+    public String getTitle() {
+        return title;
+    }
 
-  public String getTitle() {
-    return title_;
-  }
+    public int getUndetected() {
+        return undetected;
+    }
 
-  public int getUndetected() {
-    return undetected_;
-  }
-
-  public int getTotalMutations() {
-    return total_;
-  }
-
-  private String title_;
-  private int undetected_ = 0;
-  private int total_;
-  private Multiset<String> mutationsByType_;
+    public int getTotalMutations() {
+        return total;
+    }
 }
 

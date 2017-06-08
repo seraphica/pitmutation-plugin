@@ -14,16 +14,16 @@ import java.util.Collection;
  */
 public class MutatedClassTest extends MutationResultTest {
 
-  @Before
-  public void setup() {
-    Collection<Mutation> mutations = new ArrayList<Mutation>();
-    mutatedClass_ = new MutatedClass("TestClass", null, mutations);
-  }
+    private MutatedClass mutatedClass_;
 
-  @Test
-  public void lineUrlsAreSet() {
+    @Before
+    public void setup() {
+        Collection<Mutation> mutations = new ArrayList<Mutation>();
+        mutatedClass_ = new MutatedClass("TestClass", null, mutations);
+    }
 
-  }
+    @Test
+    public void lineUrlsAreSet() {
 
-  private MutatedClass mutatedClass_;
+    }
 }

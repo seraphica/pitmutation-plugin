@@ -6,5 +6,5 @@ import hudson.model.Result;
  * @author edward
  */
 interface Condition {
-  Result decideResult(PitBuildAction action);
+    Result decideResult(PitBuildAction action);
 }

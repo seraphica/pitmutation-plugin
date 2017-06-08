@@ -4,7 +4,11 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
-import hudson.model.*;
+import hudson.model.AbstractProject;
+import hudson.model.Action;
+import hudson.model.Result;
+import hudson.model.Run;
+import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
@@ -28,13 +32,20 @@ import java.util.List;
  *
  * @author edward
  */
-public class PitPublisher extends Recorder implements SimpleBuildStep{
+public class PitPublisher extends Recorder implements SimpleBuildStep {
+
 
     /**
      * The constant DESCRIPTOR.
      */
     @Extension
-  public static final BuildStepDescriptor<Publisher> DESCRIPTOR = new DescriptorImpl();
+    public static final BuildStepDescriptor<Publisher> DESCRIPTOR = new DescriptorImpl();
+    private List<Condition> buildConditions;
+    private String mutationStatsFile;
+    private boolean killRatioMustImprove;
+    private float minimumKillRatio;
+    private transient TaskListener listener;
+    private Run<?, ?> build;
 
     /**
      * Instantiates a new Pit publisher.
@@ -44,43 +55,43 @@ public class PitPublisher extends Recorder implements SimpleBuildStep{
      * @param killRatioMustImprove the kill ratio must improve
      */
     @DataBoundConstructor
-  public PitPublisher(String mutationStatsFile, float minimumKillRatio, boolean killRatioMustImprove) {
-    mutationStatsFile_ = mutationStatsFile;
-    killRatioMustImprove_ = killRatioMustImprove;
-    minimumKillRatio_ = minimumKillRatio;
-    buildConditions_ = new ArrayList<Condition>();
-    buildConditions_.add(percentageThreshold(minimumKillRatio));
-    if (killRatioMustImprove) {
-      buildConditions_.add(mustImprove());
+    public PitPublisher(String mutationStatsFile, float minimumKillRatio, boolean killRatioMustImprove) {
+        this.mutationStatsFile = mutationStatsFile;
+        this.killRatioMustImprove = killRatioMustImprove;
+        this.minimumKillRatio = minimumKillRatio;
+        this.buildConditions = new ArrayList<Condition>();
+        this.buildConditions.add(percentageThreshold(minimumKillRatio));
+        if (killRatioMustImprove) {
+            this.buildConditions.add(mustImprove());
+        }
     }
-  }
 
-  @Override
-  public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
+    @Override
+    public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
 
-    listener_ = listener;
-    build_ = build;
+        this.listener = listener;
+        this.build = build;
 
-      listener_.getLogger().println("Looking for PIT reports in " + workspace.getRemote());
+        this.listener.getLogger().println("Looking for PIT reports in " + workspace.getRemote());
 
-      final FilePath moduleRoot =  workspace;
+        final FilePath moduleRoot = workspace;
 
-      ParseReportCallable fileCallable = new ParseReportCallable(mutationStatsFile_);
-      FilePath[] reports = moduleRoot.act(fileCallable);
-      publishReports(reports, new FilePath(build.getRootDir()));
+        ParseReportCallable fileCallable = new ParseReportCallable(mutationStatsFile);
+        FilePath[] reports = moduleRoot.act(fileCallable);
+        publishReports(reports, new FilePath(build.getRootDir()));
 
-      PitBuildAction action = new PitBuildAction(build);
-      build.getActions().add(action);
-      build.setResult(decideBuildResult(action));
-  }
+        PitBuildAction action = new PitBuildAction(build);
+        build.getActions().add(action);
+        build.setResult(decideBuildResult(action));
+    }
 
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public Action getProjectAction(AbstractProject<?, ?> project) {
-    return new PitProjectAction(project);
-  }
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Action getProjectAction(AbstractProject<?, ?> project) {
+        return new PitProjectAction(project);
+    }
 
     /**
      * Publish reports.
@@ -89,22 +100,22 @@ public class PitPublisher extends Recorder implements SimpleBuildStep{
      * @param buildTarget the build target
      */
     void publishReports(FilePath[] reports, FilePath buildTarget) {
-    for (int i = 0; i < reports.length; i++) {
-      FilePath report = reports[i];
-      listener_.getLogger().println("Publishing mutation report: " + report.getRemote());
+        for (int i = 0; i < reports.length; i++) {
+            FilePath report = reports[i];
+            listener.getLogger().println("Publishing mutation report: " + report.getRemote());
 
-      final FilePath targetPath = new FilePath(buildTarget, "mutation-report" + (i == 0 ? "" : i));
-      try {
-        reports[i].getParent().copyRecursiveTo(targetPath);
-      } catch (IOException e) {
-        Util.displayIOException(e, listener_);
-        e.printStackTrace(listener_.fatalError("Unable to copy coverage from " + reports[i] + " to " + buildTarget));
-        build_.setResult(Result.FAILURE);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
+            final FilePath targetPath = new FilePath(buildTarget, "mutation-report" + (i == 0 ? "" : i));
+            try {
+                reports[i].getParent().copyRecursiveTo(targetPath);
+            } catch (IOException e) {
+                Util.displayIOException(e, listener);
+                e.printStackTrace(listener.fatalError("Unable to copy coverage from " + reports[i] + " to " + buildTarget));
+                build.setResult(Result.FAILURE);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
-  }
 
     /**
      * Mutations report exists boolean.
@@ -113,20 +124,18 @@ public class PitPublisher extends Recorder implements SimpleBuildStep{
      * @return the boolean
      */
     boolean mutationsReportExists(FilePath reportDir) {
-    if (reportDir == null) {
-      return false;
+        if (reportDir == null) {
+            return false;
+        }
+        try {
+            FilePath[] search = reportDir.list("**/mutations.xml");
+            return search.length > 0;
+        } catch (IOException e) {
+            return false;
+        } catch (InterruptedException e) {
+            return false;
+        }
     }
-    try {
-      FilePath[] search = reportDir.list("**/mutations.xml");
-      return search.length > 0;
-    }
-    catch (IOException e) {
-      return false;
-    }
-    catch (InterruptedException e) {
-      return false;
-    }
-  }
 
     /**
      * Decide build result result.
@@ -135,13 +144,13 @@ public class PitPublisher extends Recorder implements SimpleBuildStep{
      * @return the worst result from all conditions
      */
     public Result decideBuildResult(PitBuildAction action) {
-    Result result = Result.SUCCESS;
-    for (Condition condition : buildConditions_) {
-      Result conditionResult = condition.decideResult(action);
-      result = conditionResult.isWorseThan(result) ? conditionResult : result;
+        Result result = Result.SUCCESS;
+        for (Condition condition : buildConditions) {
+            Result conditionResult = condition.decideResult(action);
+            result = conditionResult.isWorseThan(result) ? conditionResult : result;
+        }
+        return result;
     }
-    return result;
-  }
 
 
     /**
@@ -150,8 +159,8 @@ public class PitPublisher extends Recorder implements SimpleBuildStep{
      * @return the minimum kill ratio
      */
     public float getMinimumKillRatio() {
-    return minimumKillRatio_;
-  }
+        return minimumKillRatio;
+    }
 
     /**
      * Required by plugin config
@@ -159,8 +168,8 @@ public class PitPublisher extends Recorder implements SimpleBuildStep{
      * @return the kill ratio must improve
      */
     public boolean getKillRatioMustImprove() {
-    return killRatioMustImprove_;
-  }
+        return killRatioMustImprove;
+    }
 
     /**
      * Required by plugin config
@@ -168,62 +177,53 @@ public class PitPublisher extends Recorder implements SimpleBuildStep{
      * @return the mutation stats file
      */
     public String getMutationStatsFile() {
-    return mutationStatsFile_;
-  }
-
-  private Condition percentageThreshold(final float percentage) {
-    return new Condition() {
-      public Result decideResult(PitBuildAction action) {
-        MutationStats stats = action.getReport().getMutationStats();
-        listener_.getLogger().println("Kill ratio is " + stats.getKillPercent() +"% ("
-                                      + stats.getKillCount() + "  " + stats.getTotalMutations() +")");
-        return stats.getKillPercent() >= percentage ? Result.SUCCESS : Result.FAILURE;
-      }
-    };
-  }
-
-  private Condition mustImprove() {
-    return new Condition() {
-      public Result decideResult(final PitBuildAction action) {
-        PitBuildAction previousAction = action.getPreviousAction();
-        if (previousAction != null) {
-          MutationStats stats = previousAction.getReport().getMutationStats();
-          listener_.getLogger().println("Previous kill ratio was " + stats.getKillPercent() + "%");
-          return action.getReport().getMutationStats().getKillPercent() <= stats.getKillPercent()
-                  ? Result.SUCCESS : Result.UNSTABLE ;
-        }
-        else {
-          return Result.SUCCESS;
-        }
-      }
-    };
-  }
-
-  @Override
-  public BuildStepDescriptor<Publisher> getDescriptor() {
-    return DESCRIPTOR;
-  }
-
-  public BuildStepMonitor getRequiredMonitorService() {
-    return BuildStepMonitor.BUILD;
-  }
-
-  private FilePath getReportDir(FilePath root) throws IOException, InterruptedException {
-    FilePath reportsDir = new FilePath(root, mutationStatsFile_);
-    if (reportsDir.isDirectory()) {
-      return reportsDir;
+        return mutationStatsFile;
     }
-    else {
-      return reportsDir.getParent();
-    }
-  }
 
-  private List<Condition> buildConditions_;
-  private String mutationStatsFile_;
-  private boolean killRatioMustImprove_;
-  private float minimumKillRatio_;
-  private transient TaskListener listener_;
-  private Run<?,?> build_;
+    private Condition percentageThreshold(final float percentage) {
+        return new Condition() {
+            public Result decideResult(PitBuildAction action) {
+                MutationStats stats = action.getReport().getMutationStats();
+                listener.getLogger().println("Kill ratio is " + stats.getKillPercent() + "% ("
+                        + stats.getKillCount() + "  " + stats.getTotalMutations() + ")");
+                return stats.getKillPercent() >= percentage ? Result.SUCCESS : Result.FAILURE;
+            }
+        };
+    }
+
+    private Condition mustImprove() {
+        return new Condition() {
+            public Result decideResult(final PitBuildAction action) {
+                PitBuildAction previousAction = action.getPreviousAction();
+                if (previousAction != null) {
+                    MutationStats stats = previousAction.getReport().getMutationStats();
+                    listener.getLogger().println("Previous kill ratio was " + stats.getKillPercent() + "%");
+                    return action.getReport().getMutationStats().getKillPercent() <= stats.getKillPercent()
+                            ? Result.SUCCESS : Result.UNSTABLE;
+                } else {
+                    return Result.SUCCESS;
+                }
+            }
+        };
+    }
+
+    @Override
+    public BuildStepDescriptor<Publisher> getDescriptor() {
+        return DESCRIPTOR;
+    }
+
+    public BuildStepMonitor getRequiredMonitorService() {
+        return BuildStepMonitor.BUILD;
+    }
+
+    private FilePath getReportDir(FilePath root) throws IOException, InterruptedException {
+        FilePath reportsDir = new FilePath(root, mutationStatsFile);
+        if (reportsDir.isDirectory()) {
+            return reportsDir;
+        } else {
+            return reportsDir.getParent();
+        }
+    }
 
 
     /**
@@ -235,47 +235,47 @@ public class PitPublisher extends Recorder implements SimpleBuildStep{
          * Instantiates a new Descriptor.
          */
         public DescriptorImpl() {
-      super(PitPublisher.class);
-    }
+            super(PitPublisher.class);
+        }
 
-    @Override
-    public String getDisplayName() {
-      return Messages.PitPublisher_DisplayName();
-    }
+        @Override
+        public String getDisplayName() {
+            return Messages.PitPublisher_DisplayName();
+        }
 
-    @Override
-    public boolean isApplicable(Class<? extends AbstractProject> aClass) {
-      return true;
-    }
+        @Override
+        public boolean isApplicable(Class<? extends AbstractProject> aClass) {
+            return true;
+        }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
-      req.bindParameters(this, "pitmutation");
-      save();
-      return super.configure(req, formData);
-    }
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
+            req.bindParameters(this, "pitmutation");
+            save();
+            return super.configure(req, formData);
+        }
 
-    /**
-     * Creates a new instance of {@link PitPublisher} from a submitted form.
-     */
-    @Override
-    public PitPublisher newInstance(StaplerRequest req, JSONObject formData) throws FormException {
-      PitPublisher instance = req.bindJSON(PitPublisher.class, formData);
-      return instance;
+        /**
+         * Creates a new instance of {@link PitPublisher} from a submitted form.
+         */
+        @Override
+        public PitPublisher newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+            PitPublisher instance = req.bindJSON(PitPublisher.class, formData);
+            return instance;
+        }
     }
-  }
 
     /**
      * The type Parse report callable.
      */
     public static class ParseReportCallable implements FilePath.FileCallable<FilePath[]> {
 
-    private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 1L;
 
-    private final String reportFilePath;
+        private final String reportFilePath;
 
         /**
          * Instantiates a new Parse report callable.
@@ -283,20 +283,20 @@ public class PitPublisher extends Recorder implements SimpleBuildStep{
          * @param reportFilePath the report file path
          */
         public ParseReportCallable(String reportFilePath) {
-      this.reportFilePath = reportFilePath;
-    }
+            this.reportFilePath = reportFilePath;
+        }
 
-    public FilePath[] invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
-      FilePath[] r = new FilePath(f).list(reportFilePath);
-      if (r.length < 1) {
-        throw new IOException("No reports found at location:" + reportFilePath);
-      }
-      return r;
-    }
+        public FilePath[] invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
+            FilePath[] r = new FilePath(f).list(reportFilePath);
+            if (r.length < 1) {
+                throw new IOException("No reports found at location:" + reportFilePath);
+            }
+            return r;
+        }
 
-    @Override
-    public void checkRoles(RoleChecker roleChecker) throws SecurityException {
+        @Override
+        public void checkRoles(RoleChecker roleChecker) throws SecurityException {
 
+        }
     }
-  }
 }
