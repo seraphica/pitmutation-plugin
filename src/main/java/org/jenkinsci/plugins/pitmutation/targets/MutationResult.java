@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+
 /**
  * @author Ed Kimber
  */
@@ -38,12 +40,13 @@ public abstract class MutationResult<T extends MutationResult> implements Compar
         return parent;
     }
 
+    //JELLY
     public List<MutationResult> getParents() {
         List<MutationResult> result = new ArrayList<MutationResult>();
-        MutationResult p = getParent();
-        while (p != null) {
-            result.add(p);
-            p = p.getParent();
+        MutationResult parent = getParent();
+        while (parent != null) {
+            result.add(parent);
+            parent = parent.getParent();
         }
         Collections.reverse(result);
         return result;
@@ -68,27 +71,33 @@ public abstract class MutationResult<T extends MutationResult> implements Compar
         return getChildMap().get(name);
     }
 
+    //JELLY
     public boolean isSourceLevel() {
         return false;
     }
 
+    //JELLY
     public String getSourceFileContent() {
-        return "";
+        return EMPTY;
     }
 
+    //JELLY
     public boolean isCoverageAltered() {
         return false;
     }
 
+    //JELLY
     public Collection<? extends MutationResult> getChildren() {
         return Ordering.natural().reverse().sortedCopy(getChildMap().values());
     }
 
+    //JELLY
     public MutationStats getStatsDelta() {
         MutationResult previous = getPreviousResult();
         return previous == null ? getMutationStats() : getMutationStats().delta(previous.getMutationStats());
     }
 
+    //FIXME Stapler Jelly?
     public Object getDynamic(String token, StaplerRequest req, StaplerResponse rsp) throws IOException {
         for (String name : getChildMap().keySet()) {
             if (urlTransform(name).equalsIgnoreCase(token)) {
@@ -98,6 +107,7 @@ public abstract class MutationResult<T extends MutationResult> implements Compar
         return "#";
     }
 
+    //JELLY
     public Run<?, ?> getOwner() {
         return owner;
     }
@@ -107,9 +117,12 @@ public abstract class MutationResult<T extends MutationResult> implements Compar
     }
 
     public static String xmlTransform(String name) {
-        return name.replaceAll("\\&", "&amp;").replaceAll("\\<", "&lt;").replaceAll("\\>", "&gt;");
+        return name.replaceAll("\\&", "&amp;").
+                replaceAll("\\<", "&lt;").
+                replaceAll("\\>", "&gt;");
     }
 
+    //JELLY
     public String relativeUrl(MutationResult parent) {
         StringBuilder url = new StringBuilder("..");
 

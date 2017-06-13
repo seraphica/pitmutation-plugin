@@ -12,11 +12,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.lessThan;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -46,7 +42,7 @@ public class MutationResultTest {
 
         PitBuildAction previousBuildAction_ = mock(PitBuildAction.class);
         when(previousBuildAction_.getReports()).thenReturn(reportsOld);
-        when(previousBuildAction_.getReport()).thenReturn(new ProjectMutations(previousBuildAction_));
+//        when(previousBuildAction_.getReport()).thenReturn(new ProjectMutations(previousBuildAction_));
 
         when(buildAction_.getPreviousAction()).thenReturn(previousBuildAction_);
 

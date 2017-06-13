@@ -15,25 +15,29 @@ import java.util.Map;
  */
 public class ProjectMutations extends MutationResult<ProjectMutations> {
 
-    private PitBuildAction action;
+    private static final String RESULT_NAME = "aggregate";
+    private static final String DISPLAY_NAME = "Modules";
+    private static final String NAME = "Aggregated Reports";
+    private PitBuildAction pitBuildAction;
 
-    public ProjectMutations(PitBuildAction action) {
-        super("aggregate", null);
-        this.action = action;
+    public ProjectMutations(PitBuildAction pitBuildAction) {
+        super(RESULT_NAME, null);
+        this.pitBuildAction = pitBuildAction;
     }
 
     @Override
     public Run<?, ?> getOwner() {
-        return action.getOwner();
+        return pitBuildAction.getOwner();
     }
 
+    @Override
     public ProjectMutations getPreviousResult() {
-        return action.getPreviousAction().getReport();
+        return new ProjectMutations(pitBuildAction.getPreviousAction());
     }
 
     @Override
     public MutationStats getMutationStats() {
-        return aggregateStats(action.getReports().values());
+        return aggregateStats(pitBuildAction.getReports().values());
     }
 
     private static MutationStats aggregateStats(Collection<MutationReport> reports) {
@@ -46,21 +50,24 @@ public class ProjectMutations extends MutationResult<ProjectMutations> {
 
     @Override
     public String getName() {
-        return "Aggregated Reports";
+        return NAME;
     }
 
+    @Override
     public String getDisplayName() {
-        return "Modules";
+        return DISPLAY_NAME;
     }
 
+    @Override
     public Map<String, ? extends MutationResult<?>> getChildMap() {
-        return Maps.transformEntries(action.getReports(), new Maps.EntryTransformer<String, MutationReport, ModuleResult>() {
+        return Maps.transformEntries(pitBuildAction.getReports(), new Maps.EntryTransformer<String, MutationReport, ModuleResult>() {
             public ModuleResult transformEntry(String moduleName, MutationReport report) {
                 return new ModuleResult(moduleName, ProjectMutations.this, report);
             }
         });
     }
 
+    @Override
     public int compareTo(ProjectMutations other) {
         return this.getMutationStats().getUndetected() - other.getMutationStats().getUndetected();
     }

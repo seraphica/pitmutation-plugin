@@ -7,6 +7,8 @@ import java.math.BigDecimal;
  */
 public abstract class MutationStats {
 
+    private static final int ROUND_SCALE = 3;
+
     public abstract String getTitle();
 
     public abstract int getUndetected();
@@ -29,7 +31,7 @@ public abstract class MutationStats {
             return ratio;
         }
         BigDecimal bd = new BigDecimal(ratio);
-        BigDecimal rounded = bd.setScale(3, BigDecimal.ROUND_HALF_UP);
+        BigDecimal rounded = bd.setScale(ROUND_SCALE, BigDecimal.ROUND_HALF_UP);
         return rounded.floatValue();
     }
 

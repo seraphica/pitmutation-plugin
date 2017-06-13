@@ -236,7 +236,7 @@ public class MutationResultSingleModuleIT {
         Map<String, MutationReport> reportsOld = createOldMutationReportsMap();
         PitBuildAction previousBuildAction = mock(PitBuildAction.class); //M
         when(previousBuildAction.getReports()).thenReturn(reportsOld);
-        when(previousBuildAction.getReport()).thenReturn(new ProjectMutations(previousBuildAction));
+//        when(previousBuildAction.getReport()).thenReturn(new ProjectMutations(previousBuildAction));
         return previousBuildAction;
     }
 

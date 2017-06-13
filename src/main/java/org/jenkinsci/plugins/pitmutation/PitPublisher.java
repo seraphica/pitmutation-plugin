@@ -4,11 +4,7 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
-import hudson.model.AbstractProject;
-import hudson.model.Action;
-import hudson.model.Result;
-import hudson.model.Run;
-import hudson.model.TaskListener;
+import hudson.model.*;
 import hudson.remoting.VirtualChannel;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
@@ -18,6 +14,7 @@ import jenkins.tasks.SimpleBuildStep;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang3.StringUtils;
 import org.jenkinsci.plugins.pitmutation.targets.MutationStats;
+import org.jenkinsci.plugins.pitmutation.targets.ProjectMutations;
 import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
@@ -36,12 +33,12 @@ import java.util.List;
 public class PitPublisher extends Recorder implements SimpleBuildStep {
 
 
+    private static final String ROOT_REPORT_FOLDER = "mutation-report";
     /**
      * The constant DESCRIPTOR.
      */
     @Extension
     public static final BuildStepDescriptor<Publisher> DESCRIPTOR = new DescriptorImpl();
-    private static final String ROOT_REPORT_FOLDER = "mutation-report";
 
     private List<Condition> buildConditions;
     private String mutationStatsFile;
@@ -71,10 +68,8 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
 
     @Override
     public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
-
         this.listener = listener;
         this.build = build;
-
         this.listener.getLogger().println("Looking for PIT reports in " + workspace.getRemote());
 
         ParseReportCallable fileCallable = new ParseReportCallable(mutationStatsFile);
@@ -178,6 +173,7 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
 
 
     /**
+     * JELLY
      * Required by plugin config
      *
      * @return the minimum kill ratio
@@ -187,6 +183,7 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
     }
 
     /**
+     * JELLY
      * Required by plugin config
      *
      * @return the kill ratio must improve
@@ -196,6 +193,7 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
     }
 
     /**
+     * JELLY
      * Required by plugin config
      *
      * @return the mutation stats file
@@ -207,7 +205,7 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
     private Condition percentageThreshold(final float percentage) {
         return new Condition() {
             public Result decideResult(PitBuildAction action) {
-                MutationStats stats = action.getReport().getMutationStats();
+                MutationStats stats = new ProjectMutations(action).getMutationStats();
                 listener.getLogger().println("Kill ratio is " + stats.getKillPercent() + "% ("
                         + stats.getKillCount() + "  " + stats.getTotalMutations() + ")");
                 return stats.getKillPercent() >= percentage ? Result.SUCCESS : Result.FAILURE;
@@ -220,9 +218,9 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
             public Result decideResult(final PitBuildAction action) {
                 PitBuildAction previousAction = action.getPreviousAction();
                 if (previousAction != null) {
-                    MutationStats stats = previousAction.getReport().getMutationStats();
+                    MutationStats stats = new ProjectMutations(action).getMutationStats();
                     listener.getLogger().println("Previous kill ratio was " + stats.getKillPercent() + "%");
-                    return action.getReport().getMutationStats().getKillPercent() <= stats.getKillPercent()
+                    return new ProjectMutations(action).getMutationStats().getKillPercent() <= stats.getKillPercent()
                             ? Result.SUCCESS : Result.UNSTABLE;
                 } else {
                     return Result.SUCCESS;

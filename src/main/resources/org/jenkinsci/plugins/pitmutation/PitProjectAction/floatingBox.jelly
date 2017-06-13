@@ -1,4 +1,3 @@
-<?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core"
 >
     <j:set var="lastResult" value="${from.lastResult.result}"/>
@@ -13,6 +12,7 @@
                     <div>
                         <a href="${from.urlName}/">
                             <img src="${from.urlName}/graph"/>
+                            tutaj wykres
                         </a>
                     </div>
                 </j:when>

@@ -17,9 +17,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.lessThan;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
@@ -236,7 +234,7 @@ public class MutationResultMultiModuleIT {
         Map<String, MutationReport> reportsOld = createOldMutationReportsMap();
         PitBuildAction previousBuildAction = mock(PitBuildAction.class); //M
         when(previousBuildAction.getReports()).thenReturn(reportsOld);
-        when(previousBuildAction.getReport()).thenReturn(new ProjectMutations(previousBuildAction));
+//        when(previousBuildAction.getReport()).thenReturn(new ProjectMutations(previousBuildAction));
         return previousBuildAction;
     }
 

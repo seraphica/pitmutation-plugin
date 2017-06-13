@@ -16,20 +16,19 @@ public class MutationStatsImpl extends MutationStats {
     private int total;
     private Multiset<String> mutationsByType;
 
+
     public MutationStatsImpl(String title, Collection<Mutation> mutations) {
         this.title = title;
         mutationsByType = HashMultiset.create();
-        if (mutations == null) {
-            return;
-        }
-        for (Mutation m : mutations) {
-            if (!m.isDetected()) {
-                undetected++;
+        if (mutations != null) {
+            for (Mutation m : mutations) {
+                if (!m.isDetected()) {
+                    undetected++;
+                }
+                mutationsByType.add(m.getMutatorClass());
             }
-            mutationsByType.add(m.getMutatorClass());
+            total = mutations.size();
         }
-
-        total = mutations.size();
     }
 
     public String getTitle() {

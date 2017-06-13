@@ -26,6 +26,7 @@ public class MutatedLine extends MutationResult<MutatedLine> {
         this.lineNumber = Integer.valueOf(line);
     }
 
+    //JELLY
     public Collection<String> getMutators() {
         return new HashSet<String>(Collections2.transform(mutations, new Function<Mutation, String>() {
             public String apply(Mutation mutation) {
