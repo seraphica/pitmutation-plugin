@@ -1,85 +1,96 @@
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
-         xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-    <l:layout>
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:l="/lib/layout"
+>
+    <l:layout title="mutation_result_layout">
         <st:include it="${it.owner}" page="sidepanel.jelly"/>
         <l:main-panel>
             <h1>${it.displayName}</h1>
             <j:forEach var="parent" items="${it.parents}">
-              <a href="${it.relativeUrl(parent)}">${parent.xmlTransform(parent.name)}</a>
+                <a href="${it.relativeUrl(parent)}">${parent.xmlTransform(parent.name)}</a>
                 &gt;
             </j:forEach>
             <h2>Mutation Statistics</h2>
             <table>
-            <tr>
-            <th>Mutations</th><th>Undetected</th><th>Coverage</th>
-            </tr>
-            <tr>
-              <td>
-                ${it.mutationStats.totalMutations}
-                (<j:if test="${it.statsDelta.totalMutations &gt; 0}">+</j:if>${it.statsDelta.totalMutations})
-              </td>
-              <td>
-                ${it.mutationStats.undetected}
-                (<j:if test="${it.statsDelta.undetected &gt; 0}">+</j:if>${it.statsDelta.undetected})
-              </td>
-              <td>
-                ${it.mutationStats.killPercent}&#37;
-                (<j:if test="${it.statsDelta.killPercent &gt; 0}">+</j:if>${it.statsDelta.killPercent}&#37;)
-              </td>
-            </tr>
+                <tr>
+                    <th>Mutations</th>
+                    <th>Undetected</th>
+                    <th>Coverage</th>
+                </tr>
+                <tr>
+                    <td>
+                        ${it.mutationStats.totalMutations}
+                        (<j:if test="${it.statsDelta.totalMutations &gt; 0}">+</j:if>${it.statsDelta.totalMutations})
+                    </td>
+                    <td>
+                        ${it.mutationStats.undetected}
+                        (<j:if test="${it.statsDelta.undetected &gt; 0}">+</j:if>${it.statsDelta.undetected})
+                    </td>
+                    <td>
+                        ${it.mutationStats.killPercent}&#37;
+                        (<j:if test="${it.statsDelta.killPercent &gt; 0}">+</j:if>${it.statsDelta.killPercent}&#37;)
+                    </td>
+                </tr>
             </table>
 
             <h2>Components</h2>
             <table border="1px" class="pane sortable">
-            <tr>
-            <th>Name</th><th>Mutations</th><th>+&#x2F;-</th><th>Undetected</th><th>+&#x2F;-</th><th>Coverage</th><th>+&#x2F;-</th>
-            <j:if test="${it.sourceLevel}"><th>Mutations</th></j:if>
-            </tr>
-            <j:forEach var="child" items="${it.children}">
-            <tr>
-              <td>
-                <a href="${child.url}">${child.displayName}</a>
-              </td>
-              <td>
-                ${child.mutationStats.totalMutations}
-              </td>
-              <td>
-                <j:if test="${child.statsDelta.totalMutations &gt; 0}">+</j:if>${child.statsDelta.totalMutations}
-              </td>
-              <td>
-                ${child.mutationStats.undetected}
-              </td>
-              <td>
-                <j:if test="${child.statsDelta.undetected &gt; 0}">+</j:if>${child.statsDelta.undetected}
-              </td>
-              <td data="${child.mutationStats.killPercent}">
-                ${child.mutationStats.killPercent}&#37;
-              </td>
-              <td>
-                <j:if test="${child.statsDelta.killPercent &gt; 0}">+</j:if>${child.statsDelta.killPercent}&#37;
-              </td>
-              <j:if test="${it.sourceLevel}">
-              <td>
-                <j:forEach var="mutator" items="${child.mutators}">
-                  ${mutator}&#160;
+                <tr>
+                    <th>Name</th>
+                    <th>Mutations</th>
+                    <th>+&#x2F;-</th>
+                    <th>Undetected</th>
+                    <th>+&#x2F;-</th>
+                    <th>Coverage</th>
+                    <th>+&#x2F;-</th>
+                    <j:if test="${it.sourceLevel}">
+                        <th>Mutations</th>
+                    </j:if>
+                </tr>
+                <j:forEach var="child" items="${it.children}">
+                    <tr>
+                        <td>
+                            <a href="${child.url}">${child.displayName}</a>
+                        </td>
+                        <td>
+                            ${child.mutationStats.totalMutations}
+                        </td>
+                        <td>
+                            <j:if test="${child.statsDelta.totalMutations &gt; 0}">+</j:if>${child.statsDelta.totalMutations}
+                        </td>
+                        <td>
+                            ${child.mutationStats.undetected}
+                        </td>
+                        <td>
+                            <j:if test="${child.statsDelta.undetected &gt; 0}">+</j:if>${child.statsDelta.undetected}
+                        </td>
+                        <td data="${child.mutationStats.killPercent}">
+                            ${child.mutationStats.killPercent}&#37;
+                        </td>
+                        <td>
+                            <j:if test="${child.statsDelta.killPercent &gt; 0}">+</j:if>${child.statsDelta.killPercent}&#37;
+                        </td>
+                        <j:if test="${it.sourceLevel}">
+                            <td>
+                                <j:forEach var="mutator" items="${child.mutators}">
+                                    ${mutator}&#160;
+                                </j:forEach>
+                            </td>
+                        </j:if>
+                    </tr>
                 </j:forEach>
-              </td>
-              </j:if>
-            </tr>
-            </j:forEach>
             </table>
 
             <j:if test="${it.coverageAltered}">
-            <h1>Coverage Changes</h1>
-            <table>
-            <j:forEach var="change" items="${it.coverageChanges}">
-            </j:forEach>
-            </table>
+                <h1>Coverage Changes</h1>
+                <table>
+                    <j:forEach var="change" items="${it.coverageChanges}">
+                    </j:forEach>
+                </table>
             </j:if>
 
             <j:if test="${it.sourceLevel}">
-            <h1>Source</h1>
-            ${it.sourceFileContent}
+                <h1>Source</h1>
+                ${it.sourceFileContent}
             </j:if>
         </l:main-panel>
     </l:layout>

@@ -1,6 +1,7 @@
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
-         xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-    <l:layout xmlns:pitmuation="/hudson/plugins/pitmutation/tags" css="/plugin/pitmutation/css/style.css">
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:l="/lib/layout"
+>
+    <l:layout css="/plugin/pitmutation/css/style.css" title="nodata_layout">
         <st:include it="${it.project}" page="sidepanel.jelly"/>
         <l:main-panel>
             <h1>No valid pitmutation data available</h1>
