@@ -38,8 +38,7 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
 
 
     private static final String ROOT_REPORT_FOLDER = "mutation-report";
-    private static final String DEFAULT_MODULE_NAME = "module";
-
+    private static final String DEFAULT_MUTATION_STATS_FILE = "**/mutations.xml";
     /**
      * The constant DESCRIPTOR.
      */
@@ -62,7 +61,7 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
      */
     @DataBoundConstructor
     public PitPublisher(String mutationStatsFile, float minimumKillRatio, boolean killRatioMustImprove) {
-        this.mutationStatsFile = mutationStatsFile; // konfig z gui **/mutations.xml
+        this.mutationStatsFile = StringUtils.isEmpty(mutationStatsFile) ? DEFAULT_MUTATION_STATS_FILE : mutationStatsFile;
         this.killRatioMustImprove = killRatioMustImprove;
         this.minimumKillRatio = minimumKillRatio;
         this.buildConditions = new ArrayList<Condition>();
@@ -111,13 +110,13 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
 
     private void copySingleModuleReportFiles(FilePath[] reports, FilePath buildTarget) {
         if (reports.length > 0) {
-            copyMutationReport(reports[0], buildTarget, ROOT_REPORT_FOLDER + File.separator + DEFAULT_MODULE_NAME);//FIXME single module strategy
+            copyMutationReport(reports[0], buildTarget, ROOT_REPORT_FOLDER);
         }
     }
 
     private void copyMultiModulesReportsFiles(FilePath[] reports, FilePath buildTarget) {
         for (int i = 0; i < reports.length; i++) {
-            copyMutationReport(reports[i], buildTarget, createReportPathForMultiModule(reports[i].getRemote()));
+            copyMutationReport(reports[i], buildTarget, createReportPath(reports[i].getRemote()));
         }
     }
 
@@ -138,7 +137,7 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
         }
     }
 
-    private String createReportPathForMultiModule(String remote) {
+    private String createReportPath(String remote) {
         return getAggregatorFolderName() + File.separator + extractModuleName(remote);
     }
 
