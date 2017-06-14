@@ -13,22 +13,24 @@ import java.util.Map;
 class PitReportResultsReader {
 
     private static final String ROOT_REPORT_FOLDER = "mutation-report";
+    private static final String DEFAULT_MODULE_NAME = "module";
+
 
     Map<String, MutationReport> readReports(File rootDir, PrintStream buildLogger) {
         Map<String, MutationReport> reports = new HashMap<String, MutationReport>();
 
         try {
             FilePath[] files = new FilePath(rootDir).list(ROOT_REPORT_FOLDER + "/**/mutations.xml");
-            buildLogger.println("filesów znaleziono " + files.length);
+//            buildLogger.println("filesów znaleziono " + files.length);
             if (files.length < 1) {
                 buildLogger.println("Could not find " + ROOT_REPORT_FOLDER + "/**/mutations.xml in " + rootDir);
             }
             for (int i = 0; i < files.length; i++) {
                 if (files.length == 1) {
-                    buildLogger.println(" >>> Creating report for file: " + files[i].getRemote());
-                    reports.put(ROOT_REPORT_FOLDER, MutationReport.create(files[i].read()));
+                    buildLogger.println("Creating report for single module project, file: " + files[i].getRemote());
+                    reports.put(DEFAULT_MODULE_NAME, MutationReport.create(files[i].read()));
                 } else {
-                    buildLogger.println("Creating report for file: " + files[i].getRemote());
+                    buildLogger.println("Creating report for multi module project, file: " + files[i].getRemote());
                     reports.put(extractModuleName(files[i].getRemote()), MutationReport.create(files[i].read()));
                 }
             }
@@ -42,7 +44,7 @@ class PitReportResultsReader {
             buildLogger.println("Interrupted EXCEPTION");
             e.printStackTrace();
         }
-        buildLogger.println(" ****** Reports siezer found" + reports.size());
+//        buildLogger.println(" ****** Reports siezer found" + reports.size());
         return reports;
     }
 
