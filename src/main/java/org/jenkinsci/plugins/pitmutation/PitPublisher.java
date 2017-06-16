@@ -45,6 +45,7 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
      */
     @Extension
     public static final BuildStepDescriptor<Publisher> DESCRIPTOR = new DescriptorImpl();
+    private static final String TARGET_DIR = "target";
 
     private List<Condition> buildConditions;
     private String mutationStatsFile;
@@ -109,9 +110,13 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
         }
     }
 
+    private boolean isMultiModuleProject(FilePath[] reports) {
+        return reports.length > 1;
+    }
+
     private void copySingleModuleReportFiles(FilePath[] reports, FilePath buildTarget) {
         if (reports.length > 0) {
-            copyMutationReport(reports[0], buildTarget, ROOT_REPORT_FOLDER + File.separator + DEFAULT_MODULE_NAME);//FIXME single module strategy
+            copyMutationReport(reports[0], buildTarget, createReportPathForSingleModule());
         }
     }
 
@@ -121,8 +126,12 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
         }
     }
 
-    private boolean isMultiModuleProject(FilePath[] reports) {
-        return reports.length > 1;
+    private String createReportPathForSingleModule() {
+        return ROOT_REPORT_FOLDER + File.separator + DEFAULT_MODULE_NAME;
+    }
+
+    private String createReportPathForMultiModule(String remote) {
+        return getAggregatorFolderName() + File.separator + extractModuleName(remote);
     }
 
     private void copyMutationReport(FilePath report, FilePath buildTarget, String reportPath) {
@@ -136,10 +145,6 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-    }
-
-    private String createReportPathForMultiModule(String remote) {
-        return getAggregatorFolderName() + File.separator + extractModuleName(remote);
     }
 
     /**
@@ -256,7 +261,7 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
 
 
     String extractModuleName(String workspacePathToMutationReport) {
-        String partialSubstring = StringUtils.substringBefore(workspacePathToMutationReport, File.separator + "target" + File.separator);
+        String partialSubstring = StringUtils.substringBefore(workspacePathToMutationReport, File.separator + TARGET_DIR + File.separator);
         return StringUtils.substringAfterLast(partialSubstring, File.separator);
     }
 
@@ -268,6 +273,8 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
      * The type Descriptor.
      */
     public static class DescriptorImpl extends BuildStepDescriptor<Publisher> {
+
+        private static final String BIND_PARAMETER_PREFIX = "pitmutation";
 
         /**
          * Instantiates a new Descriptor.
@@ -291,7 +298,7 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
          */
         @Override
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
-            req.bindParameters(this, "pitmutation");
+            req.bindParameters(this, BIND_PARAMETER_PREFIX);
             save();
             return super.configure(req, formData);
         }
