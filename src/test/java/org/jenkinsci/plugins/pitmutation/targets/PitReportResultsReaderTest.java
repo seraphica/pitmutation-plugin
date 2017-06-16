@@ -1,4 +1,4 @@
-package org.jenkinsci.plugins.pitmutation;
+package org.jenkinsci.plugins.pitmutation.targets;
 
 import org.junit.Before;
 import org.junit.Test;

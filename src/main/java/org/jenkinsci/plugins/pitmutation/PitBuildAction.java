@@ -27,14 +27,10 @@ public class PitBuildAction implements HealthReportingAction, StaplerProxy {
 
     private static final String URL_NAME = "pitmutation";
 
-
-    private final PitReportResultsReader reportResultsReader = new PitReportResultsReader();
     private final PrintStream buildLogger;
     private ProjectMutations projectMutations;
 
     private final Run<?, ?> owner;
-    private Map<String, MutationReport> reports;
-
 
     public PitBuildAction(Run<?, ?> build, PrintStream logger) {
         this.owner = build;
@@ -49,16 +45,12 @@ public class PitBuildAction implements HealthReportingAction, StaplerProxy {
         return projectMutations;
     }
 
-
-//    public ProjectMutations getReport() {
-//        return new ProjectMutations(this);
-//    }
-
     public synchronized Map<String, MutationReport> getReports() {
-        if (reports == null) {
-            reports = reportResultsReader.readReports(owner.getRootDir(), buildLogger);
-        }
-        return reports;
+        return projectMutations.getReports();
+    }
+
+    public PrintStream getBuildLogger() {
+        return buildLogger;
     }
 
     /**
@@ -70,6 +62,7 @@ public class PitBuildAction implements HealthReportingAction, StaplerProxy {
     public PitBuildAction getPreviousResult() {
         return getPreviousNotFailedBuildAction();
     }
+    //        return new ProjectMutations(this);
 
     public PitBuildAction getPreviousAction() {
         return getPreviousNotFailedBuildAction();
@@ -97,9 +90,10 @@ public class PitBuildAction implements HealthReportingAction, StaplerProxy {
     }
 
     @Override
-    public HealthReport getBuildHealth() {
-        return new HealthReport((int) getProjectMutations().getMutationStats().getKillPercent(),
-                Messages._PitBuildAction_Description(getProjectMutations().getMutationStats().getKillPercent()));
+    public HealthReport getBuildHealth() { //FIXME WTF???????????????????????
+//        return new HealthReport((int) getProjectMutations().getMutationStats().getKillPercent(),
+//                Messages._PitBuildAction_Description(getProjectMutations().getMutationStats().getKillPercent()));
+        return null;
     }
 
     @Override

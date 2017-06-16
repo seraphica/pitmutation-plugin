@@ -6,8 +6,11 @@ import org.jenkinsci.plugins.pitmutation.Mutation;
 import org.jenkinsci.plugins.pitmutation.MutationReport;
 import org.jenkinsci.plugins.pitmutation.PitBuildAction;
 
+import java.io.File;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -18,8 +21,12 @@ public class ProjectMutations extends MutationResult<ProjectMutations> {
     private static final String RESULT_NAME = "aggregate";
     private static final String DISPLAY_NAME = "Modules";
     private static final String NAME = "Aggregated Reports";
+
+
     private final PitBuildAction pitBuildAction;
     private ProjectMutations previousResult;
+
+    private Map<String, MutationReport> reports;
 
     public ProjectMutations(PitBuildAction pitBuildAction) {
         super(RESULT_NAME, null);
@@ -33,6 +40,9 @@ public class ProjectMutations extends MutationResult<ProjectMutations> {
 
     @Override
     public ProjectMutations getPreviousResult() {
+        if (pitBuildAction == null) { //FIXME
+            return null;
+        }
         if (previousResult == null) {
             previousResult = new ProjectMutations(pitBuildAction.getPreviousAction());
         }
@@ -41,7 +51,7 @@ public class ProjectMutations extends MutationResult<ProjectMutations> {
 
     @Override
     public MutationStats getMutationStats() {
-        return aggregateStats(pitBuildAction.getReports().values());
+        return aggregateStats(getReports().values());
     }
 
     private static MutationStats aggregateStats(Collection<MutationReport> reports) {
@@ -64,7 +74,11 @@ public class ProjectMutations extends MutationResult<ProjectMutations> {
 
     @Override
     public Map<String, ? extends MutationResult<?>> getChildMap() {
-        return Maps.transformEntries(pitBuildAction.getReports(), new Maps.EntryTransformer<String, MutationReport, ModuleResult>() {
+        Map<String, MutationReport> reports = getReports();
+        if (reports.isEmpty()) {
+            return new HashMap<String, MutationResult<?>>();
+        }
+        return Maps.transformEntries(reports, new Maps.EntryTransformer<String, MutationReport, ModuleResult>() {
             public ModuleResult transformEntry(String moduleName, MutationReport report) {
                 return new ModuleResult(moduleName, ProjectMutations.this, report);
             }
@@ -76,4 +90,15 @@ public class ProjectMutations extends MutationResult<ProjectMutations> {
         return this.getMutationStats().getUndetected() - other.getMutationStats().getUndetected();
     }
 
+    public synchronized Map<String, MutationReport> getReports() {
+        if (pitBuildAction == null) { //FIXME
+            return new HashMap<String, MutationReport>();
+        }
+        if (reports == null) {
+            File rootDir = pitBuildAction.getOwner().getRootDir();
+            PrintStream buildLogger = pitBuildAction.getBuildLogger();
+            reports = new PitReportResultsReader().readReports(rootDir, buildLogger);
+        }
+        return reports;
+    }
 }

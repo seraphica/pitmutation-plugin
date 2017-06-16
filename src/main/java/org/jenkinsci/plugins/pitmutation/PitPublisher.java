@@ -40,6 +40,7 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
     private static final String ROOT_REPORT_FOLDER = "mutation-report";
     private static final String DEFAULT_MODULE_NAME = "module";
     private static final String DEFAULT_MUTATION_STATS_FILE = "**/mutations.xml";
+    private static final String MUTATION_CLASS_FILE_PATTERN = "**/*.java.html";
     /**
      * The constant DESCRIPTOR.
      */
@@ -79,13 +80,20 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
         this.build = build;
         this.listener.getLogger().println("Looking for PIT reports in " + workspace.getRemote());
 
-        ParseReportCallable fileCallable = new ParseReportCallable(mutationStatsFile);
-        FilePath[] reports = workspace.act(fileCallable); //znajdz raporty po patternie w katalogu workspace
+        FilePath[] reports = workspace.act(new ParseReportCallable(mutationStatsFile)); //znajdz raporty po patternie w katalogu workspace
+        workspace.act(new ParseReportCallable(MUTATION_CLASS_FILE_PATTERN)); //sprawdz raporty dla klas po patternie w katalogu workspace
         publishReports(reports, new FilePath(build.getRootDir())); //skopiuj do mutation-report
 
         PitBuildAction action = new PitBuildAction(build, listener.getLogger());
         build.addAction(action);
         build.setResult(decideBuildResult(action));
+    }
+
+    private void validateReports(FilePath[] reports) {
+        if (reports.length < 1) {
+            listener.fatalError("Unable to copy coverage from ");
+            build.setResult(Result.FAILURE);
+        }
     }
 
     /**

@@ -1,7 +1,8 @@
-package org.jenkinsci.plugins.pitmutation;
+package org.jenkinsci.plugins.pitmutation.targets;
 
 import hudson.FilePath;
 import org.apache.commons.lang3.StringUtils;
+import org.jenkinsci.plugins.pitmutation.MutationReport;
 import org.xml.sax.SAXException;
 
 import java.io.File;
