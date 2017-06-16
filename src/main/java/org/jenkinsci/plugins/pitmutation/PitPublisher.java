@@ -38,6 +38,7 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
 
 
     private static final String ROOT_REPORT_FOLDER = "mutation-report";
+    private static final String DEFAULT_MODULE_NAME = "module";
     private static final String DEFAULT_MUTATION_STATS_FILE = "**/mutations.xml";
     /**
      * The constant DESCRIPTOR.
@@ -110,13 +111,13 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
 
     private void copySingleModuleReportFiles(FilePath[] reports, FilePath buildTarget) {
         if (reports.length > 0) {
-            copyMutationReport(reports[0], buildTarget, ROOT_REPORT_FOLDER);
+            copyMutationReport(reports[0], buildTarget, ROOT_REPORT_FOLDER + File.separator + DEFAULT_MODULE_NAME);//FIXME single module strategy
         }
     }
 
     private void copyMultiModulesReportsFiles(FilePath[] reports, FilePath buildTarget) {
         for (int i = 0; i < reports.length; i++) {
-            copyMutationReport(reports[i], buildTarget, createReportPath(reports[i].getRemote()));
+            copyMutationReport(reports[i], buildTarget, createReportPathForMultiModule(reports[i].getRemote()));
         }
     }
 
@@ -137,7 +138,7 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
         }
     }
 
-    private String createReportPath(String remote) {
+    private String createReportPathForMultiModule(String remote) {
         return getAggregatorFolderName() + File.separator + extractModuleName(remote);
     }
 
