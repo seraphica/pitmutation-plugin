@@ -211,7 +211,7 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
     private Condition percentageThreshold(final float percentage) {
         return new Condition() {
             public Result decideResult(PitBuildAction action) {
-                MutationStats stats = new ProjectMutations(action).getMutationStats();
+                MutationStats stats = action.getProjectMutations().getMutationStats();
                 listener.getLogger().println("Kill ratio is " + stats.getKillPercent() + "% ("
                         + stats.getKillCount() + "  " + stats.getTotalMutations() + ")");
                 return stats.getKillPercent() >= percentage ? Result.SUCCESS : Result.FAILURE;
@@ -224,9 +224,10 @@ public class PitPublisher extends Recorder implements SimpleBuildStep {
             public Result decideResult(final PitBuildAction action) {
                 PitBuildAction previousAction = action.getPreviousAction();
                 if (previousAction != null) {
-                    MutationStats stats = new ProjectMutations(action).getMutationStats();
+                    ProjectMutations projectMutations = action.getProjectMutations();
+                    MutationStats stats = projectMutations.getMutationStats();
                     listener.getLogger().println("Previous kill ratio was " + stats.getKillPercent() + "%");
-                    return new ProjectMutations(action).getMutationStats().getKillPercent() <= stats.getKillPercent()
+                    return projectMutations.getMutationStats().getKillPercent() <= stats.getKillPercent()
                             ? Result.SUCCESS : Result.UNSTABLE;
                 } else {
                     return Result.SUCCESS;

@@ -1,6 +1,10 @@
 package org.jenkinsci.plugins.pitmutation;
 
-import hudson.model.*;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.model.Actionable;
+import hudson.model.ProminentProjectAction;
+import hudson.model.Result;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
@@ -10,13 +14,12 @@ import java.io.IOException;
  * @author Ed Kimber
  */
 public class PitProjectAction extends Actionable implements ProminentProjectAction {
-    private static final String ICON_FILE = "/plugin/pitmutation/donatello.png";
+
     private static final String URL_NAME = "pitmutation";
-    private static final String DISPLAY_NAME = "PIT Mutation Report";
 
     private final AbstractProject<?, ?> project;
 
-    public PitProjectAction(AbstractProject<?, ?> project) {
+    public PitProjectAction(AbstractProject<?, ?> project) {// FIXME Tu podzialajmy z ciekawosci
         this.project = project;
 
     }
@@ -52,7 +55,7 @@ public class PitProjectAction extends Actionable implements ProminentProjectActi
 
     @Override
     public String getIconFileName() {
-        return ICON_FILE;
+        return Messages.PitProjectAction_IconFileName();
     }
 
     @Override
@@ -62,7 +65,7 @@ public class PitProjectAction extends Actionable implements ProminentProjectActi
 
     @Override
     public String getDisplayName() {
-        return DISPLAY_NAME;
+        return Messages.PitProjectAction_DisplayName();
     }
 
     @Override
@@ -80,7 +83,7 @@ public class PitProjectAction extends Actionable implements ProminentProjectActi
         if (buildNumber == null) {
             rsp.sendRedirect2("nodata");
         } else {
-            rsp.sendRedirect2("../" + buildNumber + "/pitmutation");
+            rsp.sendRedirect2("../" + buildNumber + "/" + URL_NAME);
         }
     }
 

@@ -4,13 +4,14 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>1.580.1</version><!-- which version of Jenkins is this plugin built against? -->
-        <!--<version>1.645</version> jelly nie bangla na tej wersji -->
-        <!--1.653-->
+        <version>1.645</version>
     </parent>
+    <!--<version>1.580.1</version>&lt;!&ndash; which version of Jenkins is this plugin built against? &ndash;&gt;-->
+    <!--<version>1.645</version> jelly nie bangla na tej wersji -->
+    <!--1.653-->
 
     <artifactId>pitmutation</artifactId>
-    <version>1.0-15-SNAPSHOT</version>
+    <version>1.0.15.1-SNAPSHOT</version>
     <name>Jenkins PIT Mutation Plugin</name>
     <packaging>hpi</packaging>
     <url>http://wiki.jenkins-ci.org/display/JENKINS/pitmutation</url>

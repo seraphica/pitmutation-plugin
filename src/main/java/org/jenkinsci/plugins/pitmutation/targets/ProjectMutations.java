@@ -18,7 +18,8 @@ public class ProjectMutations extends MutationResult<ProjectMutations> {
     private static final String RESULT_NAME = "aggregate";
     private static final String DISPLAY_NAME = "Modules";
     private static final String NAME = "Aggregated Reports";
-    private PitBuildAction pitBuildAction;
+    private final PitBuildAction pitBuildAction;
+    private ProjectMutations previousResult;
 
     public ProjectMutations(PitBuildAction pitBuildAction) {
         super(RESULT_NAME, null);
@@ -32,7 +33,10 @@ public class ProjectMutations extends MutationResult<ProjectMutations> {
 
     @Override
     public ProjectMutations getPreviousResult() {
-        return new ProjectMutations(pitBuildAction.getPreviousAction());
+        if (previousResult == null) {
+            previousResult = new ProjectMutations(pitBuildAction.getPreviousAction());
+        }
+        return previousResult;
     }
 
     @Override

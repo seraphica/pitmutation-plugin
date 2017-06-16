@@ -2,7 +2,6 @@ package org.jenkinsci.plugins.pitmutation;
 
 import hudson.model.HealthReport;
 import hudson.model.HealthReportingAction;
-import hudson.model.Result;
 import hudson.model.Run;
 import hudson.util.ChartUtil;
 import hudson.util.DataSetBuilder;
@@ -20,18 +19,18 @@ import java.util.Calendar;
 import java.util.Map;
 
 /**
+ * main plugin action serialized into build.xml of jobs build
+ *
  * @author edward
  */
 public class PitBuildAction implements HealthReportingAction, StaplerProxy {
 
-    private static final String ACTION_URL_NAME = "pitmutation";
-    private static final String ICON_FILE = "/plugin/pitmutation/donatello.png";
+    private static final String URL_NAME = "pitmutation";
 
 
-//    private static Logger logger = Logger.getLogger(PitBuildAction.class.getName());
-
-    private final PitReportResultsReader reportResultsReader;
+    private final PitReportResultsReader reportResultsReader = new PitReportResultsReader();
     private final PrintStream buildLogger;
+    private ProjectMutations projectMutations;
 
     private final Run<?, ?> owner;
     private Map<String, MutationReport> reports;
@@ -40,20 +39,14 @@ public class PitBuildAction implements HealthReportingAction, StaplerProxy {
     public PitBuildAction(Run<?, ?> build, PrintStream logger) {
         this.owner = build;
         this.buildLogger = logger;
-        this.reportResultsReader = new PitReportResultsReader();
     }
 
-    public PitBuildAction getPreviousAction() {
-        while (true) {
-            Run<?, ?> previousBuild = owner.getPreviousBuild();
-            if (previousBuild == null || previousBuild.getResult() == Result.FAILURE) {
-                continue;
-            }
-            PitBuildAction previousPitBuildAction = previousBuild.getAction(PitBuildAction.class);
-            if (previousPitBuildAction != null) {
-                return previousPitBuildAction;
-            }
+
+    public ProjectMutations getProjectMutations() {
+        if (projectMutations == null) {
+            projectMutations = new ProjectMutations(this);
         }
+        return projectMutations;
     }
 
 
@@ -75,52 +68,53 @@ public class PitBuildAction implements HealthReportingAction, StaplerProxy {
      * @return Value for property 'previousResult'.
      */
     public PitBuildAction getPreviousResult() {
-        return getPreviousResult(owner);
+        return getPreviousNotFailedBuildAction();
+    }
+
+    public PitBuildAction getPreviousAction() {
+        return getPreviousNotFailedBuildAction();
     }
 
     /**
      * Gets the previous {@link PitBuildAction} of the given build.
      */
-    static PitBuildAction getPreviousResult(Run<?, ?> start) {
-        Run<?, ?> b = start;
-        while (true) {
-            b = b.getPreviousNotFailedBuild();
-            if (b == null) {
+    private PitBuildAction getPreviousNotFailedBuildAction() {
+        Run<?, ?> build = owner.getPreviousNotFailedBuild();
+        while (build != null) {
+            build = build.getPreviousNotFailedBuild();
+            if (build == null) {
                 return null;
             }
-            assert b.getResult() != Result.FAILURE : "We asked for the previous not failed build";
-            PitBuildAction r = b.getAction(PitBuildAction.class);
-            if (r != null) {
-                return r;
-            }
+            return build.getAction(PitBuildAction.class);
         }
+        return null;
     }
 
 
     @Override
     public ProjectMutations getTarget() {
-        return new ProjectMutations(this);
+        return getProjectMutations();
     }
 
     @Override
     public HealthReport getBuildHealth() {
-        return new HealthReport((int) getTarget().getMutationStats().getKillPercent(),
-                Messages._BuildAction_Description(getTarget().getMutationStats().getKillPercent()));
+        return new HealthReport((int) getProjectMutations().getMutationStats().getKillPercent(),
+                Messages._PitBuildAction_Description(getProjectMutations().getMutationStats().getKillPercent()));
     }
 
     @Override
     public String getIconFileName() {
-        return ICON_FILE;
+        return Messages.PitBuildAction_IconFileName();
     }
 
     @Override
     public String getDisplayName() {
-        return Messages.BuildAction_DisplayName();
+        return Messages.PitBuildAction_DisplayName();
     }
 
     @Override
     public String getUrlName() {
-        return ACTION_URL_NAME;
+        return URL_NAME;
     }
 
     //JELLY
@@ -150,7 +144,7 @@ public class PitBuildAction implements HealthReportingAction, StaplerProxy {
 
         buildLogger.println("I Dalej Probuje wykres narysowac");
 
-        final JFreeChart chart = ChartFactory.createLineChart(null, // chart title
+        final JFreeChart chart = ChartFactory.createLineChart("tutaj sobie testuje", // chart title
                 null, // unused
                 "%", // range axis label
                 dsb.build(), // data
